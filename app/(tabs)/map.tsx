@@ -78,7 +78,7 @@
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { useEffect, useState } from "react";
-import { Dimensions, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Dimensions, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import Animated, {
@@ -165,6 +165,12 @@ export default function MapScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
+
+  // Adjust top inset for Android
+  const topInset = Platform.select({
+    android: 0, // Remove top safe area for Android
+    default: insets.top, // Keep default for iOS
+  });
 
   const translateY = useSharedValue(0);
   const context = useSharedValue({ y: 0 });
@@ -284,15 +290,13 @@ export default function MapScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={[styles.logoContainer, { paddingTop: insets.top }]}>
-        <View style={styles.logoBackground}>
-          <Text style={styles.logoText}>salmon</Text>
-        </View>
-      </View>
+    <SafeAreaView style={[styles.container, { paddingTop: topInset }]}>
       <MapView
-        style={[styles.map, { marginTop: -insets.top }]}
-        provider={PROVIDER_GOOGLE}
+        style={[styles.map, { marginTop: Platform.select({ android: -topInset, default: -insets.top }) }]}
+        provider={Platform.select({
+          ios: undefined, // Use Apple Maps on iOS
+          android: PROVIDER_GOOGLE, // Use Google Maps on Android
+        })}
         showsUserLocation={true}
         showsMyLocationButton={true}
         initialRegion={location ? {
@@ -304,6 +308,16 @@ export default function MapScreen() {
       >
         {MOCK_FRIENDS.map(renderFriendMarker)}
       </MapView>
+      <View style={[styles.logoContainer, { 
+        paddingTop: Platform.select({ 
+          android: insets.top + 16, 
+          default: insets.top 
+        }) 
+      }]}>
+        <View style={styles.logoBackground}>
+          <Text style={styles.logoText}>salmon</Text>
+        </View>
+      </View>
       <TouchableOpacity 
         style={[styles.broadcastButton, isBroadcasting && styles.broadcastingButton]} 
         onPress={toggleBroadcast}
@@ -317,6 +331,12 @@ export default function MapScreen() {
         <Animated.View style={[styles.bottomSheetContainer, rBottomSheetStyle]}>
           <View style={styles.bottomSheetHeader}>
             <View style={styles.bottomSheetHandle} />
+            <View style={styles.bottomSheetTitleContainer}>
+              <Text style={styles.bottomSheetTitle}>Friends</Text>
+              <TouchableOpacity>
+                <Text style={styles.addFriendsButton}>Add friends</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           <FlatList
             data={MOCK_FRIENDS}
@@ -333,7 +353,7 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#F59E93",
   },
   logoContainer: {
     position: 'absolute',
@@ -412,19 +432,36 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   bottomSheetHeader: {
-    height: 30,
     width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: 'white',
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
+    paddingBottom: 16,
   },
   bottomSheetHandle: {
     width: 40,
     height: 4,
     backgroundColor: '#DDD',
     borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  bottomSheetTitleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  bottomSheetTitle: {
+    fontFamily: 'SourceCodePro-Medium',
+    fontSize: 24,
+    color: '#333',
+  },
+  addFriendsButton: {
+    fontSize: 16,
+    color: '#F59E93',
+    fontWeight: '500',
   },
   friendsList: {
     padding: 16,
