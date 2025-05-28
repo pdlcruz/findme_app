@@ -166,10 +166,11 @@ export default function MapScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
 
-  // Adjust top inset for Android
+  // Adjust top inset for Android, but not for iOS
   const topInset = Platform.select({
     android: 0, // Remove top safe area for Android
-    default: insets.top, // Keep default for iOS
+    ios: 0, // Remove top safe area for iOS (map goes to top)
+    default: insets.top, // fallback
   });
 
   const translateY = useSharedValue(0);
@@ -289,14 +290,66 @@ export default function MapScreen() {
     );
   };
 
-  return (
+  return Platform.OS === 'ios' ? (
+    <View style={styles.container}>
+      <MapView
+        style={styles.map}
+        provider={undefined} // Use Apple Maps on iOS
+        showsUserLocation={true}
+        showsMyLocationButton={true}
+        initialRegion={location ? {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        } : undefined}
+      >
+        {MOCK_FRIENDS.map(renderFriendMarker)}
+      </MapView>
+      <View style={[styles.logoContainer, { 
+        paddingTop: Platform.select({ 
+          android: insets.top + 16, 
+          default: insets.top 
+        }) 
+      }]}>
+        <View style={styles.logoBackground}>
+          <Text style={styles.logoText}>salmon</Text>
+        </View>
+      </View>
+      <TouchableOpacity 
+        style={[styles.broadcastButton, isBroadcasting && styles.broadcastingButton]} 
+        onPress={toggleBroadcast}
+      >
+        <Text style={styles.broadcastButtonText}>
+          {isBroadcasting ? "Stop Broadcasting" : "Find Me"}
+        </Text>
+      </TouchableOpacity>
+
+      <GestureDetector gesture={gesture}>
+        <Animated.View style={[styles.bottomSheetContainer, rBottomSheetStyle]}>
+          <View style={styles.bottomSheetHeader}>
+            <View style={styles.bottomSheetHandle} />
+            <View style={styles.bottomSheetTitleContainer}>
+              <Text style={styles.bottomSheetTitle}>Friends</Text>
+              <TouchableOpacity>
+                <Text style={styles.addFriendsButton}>Add friends</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <FlatList
+            data={MOCK_FRIENDS}
+            renderItem={renderFriendItem}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.friendsList}
+          />
+        </Animated.View>
+      </GestureDetector>
+    </View>
+  ) : (
     <SafeAreaView style={[styles.container, { paddingTop: topInset }]}>
       <MapView
-        style={[styles.map, { marginTop: Platform.select({ android: -topInset, default: -insets.top }) }]}
-        provider={Platform.select({
-          ios: undefined, // Use Apple Maps on iOS
-          android: PROVIDER_GOOGLE, // Use Google Maps on Android
-        })}
+        style={[styles.map, { marginTop: -topInset }]}
+        provider={PROVIDER_GOOGLE} // Use Google Maps on Android
         showsUserLocation={true}
         showsMyLocationButton={true}
         initialRegion={location ? {
