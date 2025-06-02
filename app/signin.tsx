@@ -1,108 +1,191 @@
-"use client"
+"use client";
 
-import { Ionicons } from "@expo/vector-icons"
-import { LinearGradient } from "expo-linear-gradient"
-import { router } from "expo-router"
-import { useState } from "react"
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
-    Dimensions,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from "react-native"
+  Animated,
+  Dimensions,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-const { width } = Dimensions.get("window")
+const { width } = Dimensions.get("window");
 
 export default function SignInScreen() {
-  const [phoneNumber, setPhoneNumber] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [typedLines, setTypedLines] = useState(["", "", ""]);
+  const catchphrases = [
+    "Find your friends.",
+    "Move together.",
+    "Stay in the same stream.",
+  ];
+
+  const line1Anim = useRef(new Animated.Value(-300)).current;
+  const line2Anim = useRef(new Animated.Value(-300)).current;
+  const line3Anim = useRef(new Animated.Value(-300)).current;
+
+  useEffect(() => {
+    let line = 0;
+    let char = 0;
+    let typingTimeout: NodeJS.Timeout;
+
+    function typeNextChar() {
+      if (line < catchphrases.length) {
+        if (char < catchphrases[line].length) {
+          setTypedLines((prev) => {
+            const updated = [...prev];
+            updated[line] = catchphrases[line].slice(0, char + 1);
+            return updated;
+          });
+          char++;
+          typingTimeout = setTimeout(typeNextChar, 40); // typing speed
+        } else {
+          line++;
+          char = 0;
+          typingTimeout = setTimeout(typeNextChar, 400); // pause before next line
+        }
+      }
+    }
+
+    typeNextChar();
+    return () => clearTimeout(typingTimeout);
+  }, []);
 
   const handleSignIn = (method: string) => {
-    setIsLoading(true)
+    setIsLoading(true);
 
     // Simulate loading
     setTimeout(() => {
-      setIsLoading(false)
-      // Navigate to map tab
-      router.replace("/(tabs)/map")
-    }, 1500)
-  }
+      setIsLoading(false);
+      // Navigate to share location page after sign in
+      router.replace("/share-location");
+    }, 1500);
+  };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
-      <LinearGradient colors={["#F59E93", "#F7B2A9"]} style={styles.background} />
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <LinearGradient
+        colors={["#F59E93", "#F7B2A9"]}
+        style={styles.background}
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* Logo Section */}
         <View style={styles.logoContainer}>
-          <Text style={styles.logoText}>salmon</Text>
+          <Image
+            source={require("../assets/images/logo-med.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+
+        {/* Catchphrase */}
+        <View style={styles.catchphraseContainer}>
+          {typedLines.map((line, idx) => (
+            <Text key={idx} style={styles.catchphrase}>
+              {line}
+              {line.length < catchphrases[idx].length &&
+              idx ===
+                typedLines.findIndex(
+                  (l) => l.length < catchphrases[idx].length
+                ) ? (
+                <Text style={{ opacity: 0.5 }}>|</Text>
+              ) : null}
+            </Text>
+          ))}
         </View>
 
         {/* Sign In Section */}
-        <View style={styles.formContainer}>
-          <Text style={styles.heading}>Welcome Back</Text>
+        <View style={styles.formWrapper}>
+          <View style={styles.formContainer}>
+            <Text style={styles.heading}>Log in</Text>
 
-          {/* Phone Input */}
-          <View style={styles.inputContainer}>
-            <Ionicons name="call-outline" size={20} color="white" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Phone Number"
-              placeholderTextColor="rgba(255, 255, 255, 0.7)"
-              keyboardType="phone-pad"
-              value={phoneNumber}
-              onChangeText={setPhoneNumber}
-            />
-          </View>
+            {/* Phone Input */}
+            <View style={styles.inputContainer}>
+              <Ionicons
+                name="call-outline"
+                size={20}
+                color="#F67164"
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Phone Number"
+                placeholderTextColor="#BDBDBD"
+                keyboardType="phone-pad"
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+              />
+            </View>
 
-          {/* Sign In Button */}
-          <TouchableOpacity style={styles.signInButton} onPress={() => handleSignIn("phone")} disabled={isLoading}>
-            <Text style={styles.buttonText}>{isLoading ? "Signing In..." : "Sign In with Phone"}</Text>
-          </TouchableOpacity>
-
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Social Sign In */}
-          <View style={styles.socialContainer}>
-            {/* Google Sign In */}
+            {/* Sign In Button */}
             <TouchableOpacity
-              style={[styles.socialButton, styles.googleButton]}
-              onPress={() => handleSignIn("google")}
+              style={styles.signInButton}
+              onPress={() => handleSignIn("phone")}
               disabled={isLoading}
             >
-              <Ionicons name="logo-google" size={20} color="#F59E93" />
-              <Text style={[styles.socialButtonText, { color: "#F59E93" }]}>Google</Text>
+              <Text style={styles.buttonText}>
+                {isLoading ? "Signing In..." : "Sign In with Phone"}
+              </Text>
             </TouchableOpacity>
 
-            {/* Apple Sign In */}
-            <TouchableOpacity
-              style={[styles.socialButton, styles.appleButton]}
-              onPress={() => handleSignIn("apple")}
-              disabled={isLoading}
-            >
-              <Ionicons name="logo-apple" size={20} color="#F59E93" />
-              <Text style={[styles.socialButtonText, { color: "#F59E93" }]}>Apple</Text>
+            {/* Divider */}
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>Or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Social Sign In */}
+            <View style={styles.socialRow}>
+              {/* Google Sign In */}
+              <TouchableOpacity
+                style={[styles.socialButton, styles.googleButton]}
+                onPress={() => handleSignIn("google")}
+                disabled={isLoading}
+              >
+                <Ionicons name="logo-google" size={20} color="#F67164" />
+                <Text style={[styles.socialButtonText, { color: "#F67164" }]}>
+                  Google
+                </Text>
+              </TouchableOpacity>
+
+              {/* Apple Sign In */}
+              <TouchableOpacity
+                style={[styles.socialButton, styles.appleButton]}
+                onPress={() => handleSignIn("apple")}
+                disabled={isLoading}
+              >
+                <Ionicons name="logo-apple" size={20} color="#F67164" />
+                <Text style={[styles.socialButtonText, { color: "#F67164" }]}>
+                  Apple
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.signupRow}>
+            <Text style={styles.signupText}>Don&apos;t have an account? </Text>
+            <TouchableOpacity>
+              <Text style={styles.signupLink}>Sign up</Text>
             </TouchableOpacity>
           </View>
-        </View>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>We don&apos;t like making new accounts all the time, so why should you?</Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -119,18 +202,39 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     justifyContent: "space-between",
-    padding: 20,
+    padding: 0,
   },
   logoContainer: {
     alignItems: "center",
     marginTop: 60,
-    marginBottom: 40,
+    marginBottom: 30,
   },
-  logoText: {
-    fontFamily: "SourceCodePro-Medium",
-    fontSize: 42,
-    color: "white",
-    letterSpacing: 1,
+  logo: {
+    width: 200,
+    height: 200,
+  },
+  catchphraseContainer: {
+    paddingHorizontal: 32,
+  },
+  catchphrase: {
+    color: "#F67164",
+    fontSize: 34,
+    fontWeight: "bold",
+    lineHeight: 45,
+    textAlign: "left",
+  },
+  formWrapper: {
+    backgroundColor: "#fff",
+    borderRadius: 32,
+    width: "100%",
+    paddingVertical: 32,
+    paddingHorizontal: 0,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 8,
+    alignSelf: "stretch",
   },
   formContainer: {
     width: "100%",
@@ -139,19 +243,26 @@ const styles = StyleSheet.create({
   },
   heading: {
     fontSize: 24,
-    fontWeight: "600",
-    color: "white",
-    marginBottom: 30,
-    textAlign: "center",
+    fontWeight: "700",
+    color: "#222",
+    marginBottom: 24,
+    textAlign: "left",
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "#fff",
     borderRadius: 12,
     marginBottom: 20,
     paddingHorizontal: 15,
     height: 55,
+    borderWidth: 1,
+    borderColor: "#eee",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
   inputIcon: {
     marginRight: 10,
@@ -159,44 +270,47 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: "100%",
-    color: "white",
+    color: "#222",
     fontSize: 16,
   },
   signInButton: {
-    backgroundColor: "white",
+    backgroundColor: "#F67164",
     borderRadius: 12,
     height: 55,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
+    marginBottom: 20,
+    shadowColor: "#F59E93",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   buttonText: {
-    color: "#F59E93",
+    color: "#fff",
     fontSize: 16,
     fontWeight: "600",
   },
-  divider: {
+  dividerRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 25,
+    marginVertical: 16,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    backgroundColor: "#eee",
   },
   dividerText: {
-    color: "white",
+    color: "#BDBDBD",
     paddingHorizontal: 15,
     fontSize: 14,
+    fontWeight: "600",
   },
-  socialContainer: {
+  socialRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    marginTop: 8,
   },
   socialButton: {
     flexDirection: "row",
@@ -206,22 +320,40 @@ const styles = StyleSheet.create({
     maxWidth: 160,
     height: 50,
     borderRadius: 12,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#eee",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 2,
   },
   googleButton: {
-    backgroundColor: "white",
+    backgroundColor: "#fff",
   },
   appleButton: {
-    backgroundColor: "white",
+    backgroundColor: "#fff",
   },
   socialButtonText: {
     marginLeft: 8,
     fontSize: 14,
     fontWeight: "600",
+  },
+  signupRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 18,
+  },
+  signupText: {
+    color: "#888",
+    fontSize: 14,
+  },
+  signupLink: {
+    color: "#F67164",
+    fontWeight: "bold",
+    fontSize: 14,
   },
   footer: {
     marginTop: 40,
@@ -235,4 +367,4 @@ const styles = StyleSheet.create({
     opacity: 0.8,
     maxWidth: "80%",
   },
-})
+});
