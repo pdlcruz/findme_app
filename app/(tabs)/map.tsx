@@ -74,21 +74,33 @@
 //   },
 // });
 
-
-import * as Location from 'expo-location';
-import * as Notifications from 'expo-notifications';
+import * as Location from "expo-location";
+import * as Notifications from "expo-notifications";
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Dimensions, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import {
+  Dimensions,
+  FlatList,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import Animated, {
-  Extrapolate,
-  interpolate,
+  runOnJS,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withSpring,
-} from 'react-native-reanimated';
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+} from "react-native-reanimated";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import mapStyle from "../../assets/mapStyle.json"; // adjust the path as needed
 
 // Configure notifications
 Notifications.setNotificationHandler({
@@ -98,71 +110,135 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
     shouldShowBanner: true,
     shouldShowList: true,
-    severity: 'default'
+    severity: "default",
   }),
 });
 
 // Mock friend data with locations and last ping times
 const MOCK_FRIENDS = [
-  { 
-    id: '1', 
-    name: 'John Smith', 
-    distance: '0.3 mi',
-    lastPing: '2m ago',
+  {
+    id: "1",
+    name: "John Smith",
+    distance: "0.3 mi",
+    locationName: "San Francisco, CA",
+    lastPing: "2m ago",
     location: {
       latitude: 37.7749,
       longitude: -122.4194,
-    }
+    },
   },
-  { 
-    id: '2', 
-    name: 'Emma Wilson', 
-    distance: '0.8 mi',
-    lastPing: '30s ago',
+  {
+    id: "2",
+    name: "Emma Wilson",
+    locationName: "San Francisco, CA",
+    distance: "0.8 mi",
+    lastPing: "30s ago",
     location: {
       latitude: 37.7833,
       longitude: -122.4167,
-    }
+    },
   },
-  { 
-    id: '3', 
-    name: 'Michael Brown', 
-    distance: '1.2 mi',
-    lastPing: '5m ago',
+  {
+    id: "3",
+    name: "Michael Brown",
+    locationName: "San Francisco, CA",
+    distance: "1.2 mi",
+    lastPing: "5m ago",
     location: {
       latitude: 37.7855,
       longitude: -122.4067,
-    }
+    },
   },
-  { 
-    id: '4', 
-    name: 'Sarah Davis', 
-    distance: '1.5 mi',
-    lastPing: '1m ago',
+  {
+    id: "4",
+    name: "Sarah Davis",
+    locationName: "San Francisco, CA",
+    distance: "1.5 mi",
+    lastPing: "1m ago",
     location: {
       latitude: 37.7875,
-      longitude: -122.4000,
-    }
+      longitude: -122.4,
+    },
   },
-  { 
-    id: '5', 
-    name: 'David Lee', 
-    distance: '2.0 mi',
-    lastPing: '45s ago',
+  {
+    id: "5",
+    name: "David Lee",
+    locationName: "San Francisco, CA",
+    distance: "2.0 mi",
+    lastPing: "45s ago",
     location: {
       latitude: 37.7895,
-      longitude: -122.3900,
-    }
+      longitude: -122.39,
+    },
+  },
+  {
+    id: "6",
+    name: "Olivia Martinez",
+    locationName: "San Francisco, CA",
+    distance: "2.3 mi",
+    lastPing: "10m ago",
+    location: {
+      latitude: 37.7905,
+      longitude: -122.395,
+    },
+  },
+  {
+    id: "7",
+    name: "Liam Chen",
+    locationName: "San Francisco, CA",
+    distance: "0.5 mi",
+    lastPing: "3m ago",
+    location: {
+      latitude: 37.781,
+      longitude: -122.41,
+    },
+  },
+  {
+    id: "8",
+    name: "Sophia Patel",
+    locationName: "San Francisco, CA",
+    distance: "1.8 mi",
+    lastPing: "8m ago",
+    location: {
+      latitude: 37.792,
+      longitude: -122.4,
+    },
+  },
+  {
+    id: "9",
+    name: "Noah Kim",
+    locationName: "San Francisco, CA",
+    distance: "0.9 mi",
+    lastPing: "1m ago",
+    location: {
+      latitude: 37.784,
+      longitude: -122.42,
+    },
+  },
+  {
+    id: "10",
+    name: "Ava Johnson",
+    locationName: "San Francisco, CA",
+    distance: "3.1 mi",
+    lastPing: "15m ago",
+    location: {
+      latitude: 37.793,
+      longitude: -122.405,
+    },
   },
 ];
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const BOTTOM_SHEET_HEIGHT = SCREEN_HEIGHT * 0.7;
-const MAX_TRANSLATE_Y = -BOTTOM_SHEET_HEIGHT + 50;
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const BOTTOM_SHEET_HEIGHT = SCREEN_HEIGHT;
+const PEEK_HEIGHT = BOTTOM_SHEET_HEIGHT / 2.5;
+const MIN_HEIGHT = PEEK_HEIGHT;
+const MAX_HEIGHT = SCREEN_HEIGHT * 0.85;
 
 export default function MapScreen() {
   const [isBroadcasting, setIsBroadcasting] = useState(false);
-  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [location, setLocation] = useState<Location.LocationObject | null>(
+    null
+  );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
 
@@ -173,45 +249,46 @@ export default function MapScreen() {
     default: insets.top, // fallback
   });
 
-  const translateY = useSharedValue(0);
-  const context = useSharedValue({ y: 0 });
+  const sheetHeight = useSharedValue(MIN_HEIGHT);
+  const context = useSharedValue({ h: MIN_HEIGHT });
 
   const gesture = Gesture.Pan()
     .onStart(() => {
-      context.value = { y: translateY.value };
+      context.value = { h: sheetHeight.value };
     })
     .onUpdate((event) => {
-      translateY.value = event.translationY + context.value.y;
-      translateY.value = Math.max(translateY.value, MAX_TRANSLATE_Y);
-      translateY.value = Math.min(translateY.value, 0);
+      let newHeight = context.value.h - event.translationY;
+      newHeight = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, newHeight));
+      sheetHeight.value = newHeight;
     })
     .onEnd(() => {
-      if (translateY.value > -BOTTOM_SHEET_HEIGHT / 3) {
-        translateY.value = withSpring(0, { damping: 50 });
+      if (sheetHeight.value < (MIN_HEIGHT + MAX_HEIGHT) / 2) {
+        sheetHeight.value = withSpring(MIN_HEIGHT, { damping: 50 });
       } else {
-        translateY.value = withSpring(MAX_TRANSLATE_Y, { damping: 50 });
+        sheetHeight.value = withSpring(MAX_HEIGHT, { damping: 50 });
       }
     });
 
-  const rBottomSheetStyle = useAnimatedStyle(() => {
-    const borderRadius = interpolate(
-      translateY.value,
-      [MAX_TRANSLATE_Y + 50, MAX_TRANSLATE_Y],
-      [25, 5],
-      Extrapolate.CLAMP
-    );
+  const rBottomSheetStyle = useAnimatedStyle(() => ({
+    height: sheetHeight.value,
+    borderRadius: 25,
+  }));
 
-    return {
-      borderRadius,
-      transform: [{ translateY: translateY.value }],
-    };
-  });
+  const [title, setTitle] = useState("Friends");
+
+  useDerivedValue(() => {
+    if (sheetHeight.value >= MAX_HEIGHT - 10) {
+      runOnJS(setTitle)("All Friends");
+    } else {
+      runOnJS(setTitle)("Nearby Friends");
+    }
+  }, [sheetHeight]);
 
   useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Permission to access location was denied');
+      if (status !== "granted") {
+        setErrorMsg("Permission to access location was denied");
         return;
       }
 
@@ -224,8 +301,8 @@ export default function MapScreen() {
   useEffect(() => {
     (async () => {
       const { status } = await Notifications.requestPermissionsAsync();
-      if (status !== 'granted') {
-        console.log('Notification permissions not granted');
+      if (status !== "granted") {
+        console.log("Notification permissions not granted");
       }
     })();
   }, []);
@@ -237,43 +314,63 @@ export default function MapScreen() {
     // Schedule notification
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: newState ? 'Broadcasting Started' : 'Broadcasting Stopped',
-        body: newState ? 'Your location is now being shared with friends' : 'Your location is no longer being shared',
-        data: { type: newState ? 'broadcast_start' : 'broadcast_stop' },
+        title: newState ? "Broadcasting Started" : "Broadcasting Stopped",
+        body: newState
+          ? "Your location is now being shared with friends"
+          : "Your location is no longer being shared",
+        data: { type: newState ? "broadcast_start" : "broadcast_stop" },
       },
       trigger: null, // Show immediately
     });
   };
 
-  const renderFriendItem = ({ item }: { item: typeof MOCK_FRIENDS[0] }) => {
+  const renderFriendItem = ({
+    item,
+    index,
+  }: {
+    item: (typeof MOCK_FRIENDS)[0];
+    index: number;
+  }) => {
     const initials = item.name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
       .toUpperCase();
+
+    const avatarStyle =
+      index < 2 ? styles.avatarListDoNotDisturb : styles.avatarListAvailable;
 
     return (
       <View style={styles.friendItem}>
-        <View style={styles.avatarContainer}>
+        <View style={avatarStyle}>
           <Text style={styles.avatarText}>{initials}</Text>
         </View>
         <View style={styles.friendInfo}>
           <Text style={styles.friendName}>{item.name}</Text>
-          <View style={styles.friendDetails}>
-            <Text style={styles.friendDistance}>{item.distance}</Text>
-            <Text style={styles.friendPing}>• {item.lastPing}</Text>
-          </View>
+          <Text style={styles.friendMeta}>
+            {item.locationName} | {item.lastPing}
+          </Text>
         </View>
+        <Text style={styles.friendDistance}>{item.distance}</Text>
       </View>
     );
   };
 
-  const renderFriendMarker = (friend: typeof MOCK_FRIENDS[0]) => {
+  const renderFriendMarker = (
+    friend: (typeof MOCK_FRIENDS)[0],
+    index: number
+  ) => {
     const initials = friend.name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
       .toUpperCase();
+
+    // First 2: DoNotDisturb, next 3: Available
+    const avatarStyle =
+      index < 2
+        ? styles.markerAvatarDoNotDisturb
+        : styles.markerAvatarAvailable;
 
     return (
       <Marker
@@ -282,7 +379,7 @@ export default function MapScreen() {
         anchor={{ x: 0.5, y: 0.5 }}
       >
         <View style={styles.markerContainer}>
-          <View style={styles.markerAvatar}>
+          <View style={avatarStyle}>
             <Text style={styles.markerText}>{initials}</Text>
           </View>
         </View>
@@ -290,39 +387,55 @@ export default function MapScreen() {
     );
   };
 
-  return Platform.OS === 'ios' ? (
+  return Platform.OS === "ios" ? (
     <View style={styles.container}>
       <MapView
         style={styles.map}
-        provider={undefined} // Use Apple Maps on iOS
+        provider={PROVIDER_GOOGLE}
         showsUserLocation={true}
         showsMyLocationButton={true}
-        initialRegion={location ? {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        } : undefined}
+        initialRegion={
+          location
+            ? {
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421,
+              }
+            : undefined
+        }
+        customMapStyle={mapStyle}
       >
-        {MOCK_FRIENDS.map(renderFriendMarker)}
+        {MOCK_FRIENDS.map((friend, idx) => renderFriendMarker(friend, idx))}
       </MapView>
-      <View style={[styles.logoContainer, { 
-        paddingTop: Platform.select({ 
-          android: insets.top + 16, 
-          default: insets.top 
-        }) 
-      }]}>
-        <View style={styles.logoBackground}>
-          <Text style={styles.logoText}>salmon</Text>
-        </View>
-      </View>
-      <TouchableOpacity 
-        style={[styles.broadcastButton, isBroadcasting && styles.broadcastingButton]} 
+      <View
+        style={[
+          styles.logoContainer,
+          {
+            paddingTop: Platform.select({
+              android: insets.top + 16,
+              default: insets.top,
+            }),
+          },
+        ]}
+      ></View>
+      <TouchableOpacity
+        style={[
+          styles.addHangoutButton,
+          { top: insets.top + 16 }, // Respect safe area
+        ]}
+        onPress={() => {
+          router.push("/create");
+        }}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.addHangoutButtonText}>add hangout</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.broadcastButton}
         onPress={toggleBroadcast}
       >
-        <Text style={styles.broadcastButtonText}>
-          {isBroadcasting ? "Stop Broadcasting" : "Find Me"}
-        </Text>
+        <Text>{isBroadcasting ? "Stop Broadcasting" : "Find Me"}</Text>
       </TouchableOpacity>
 
       <GestureDetector gesture={gesture}>
@@ -330,17 +443,21 @@ export default function MapScreen() {
           <View style={styles.bottomSheetHeader}>
             <View style={styles.bottomSheetHandle} />
             <View style={styles.bottomSheetTitleContainer}>
-              <Text style={styles.bottomSheetTitle}>Friends</Text>
+              <Text style={{ fontWeight: "bold", fontSize: 20 }}>{title}</Text>
               <TouchableOpacity>
                 <Text style={styles.addFriendsButton}>Add friends</Text>
               </TouchableOpacity>
             </View>
           </View>
+          <View style={styles.divider} />
           <FlatList
             data={MOCK_FRIENDS}
-            renderItem={renderFriendItem}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.friendsList}
+            renderItem={({ item, index }) => renderFriendItem({ item, index })}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={[
+              styles.friendsList,
+              { paddingBottom: insets.bottom + 24 },
+            ]}
           />
         </Animated.View>
       </GestureDetector>
@@ -352,32 +469,41 @@ export default function MapScreen() {
         provider={PROVIDER_GOOGLE} // Use Google Maps on Android
         showsUserLocation={true}
         showsMyLocationButton={true}
-        initialRegion={location ? {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        } : undefined}
+        initialRegion={
+          location
+            ? {
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421,
+              }
+            : undefined
+        }
+        customMapStyle={mapStyle}
       >
-        {MOCK_FRIENDS.map(renderFriendMarker)}
+        {MOCK_FRIENDS.map((friend, idx) => renderFriendMarker(friend, idx))}
       </MapView>
-      <View style={[styles.logoContainer, { 
-        paddingTop: Platform.select({ 
-          android: insets.top + 16, 
-          default: insets.top 
-        }) 
-      }]}>
+      <View
+        style={[
+          styles.logoContainer,
+          {
+            paddingTop: Platform.select({
+              android: insets.top + 16,
+              default: insets.top,
+            }),
+          },
+        ]}
+      >
         <View style={styles.logoBackground}>
           <Text style={styles.logoText}>salmon</Text>
         </View>
       </View>
-      <TouchableOpacity 
-        style={[styles.broadcastButton, isBroadcasting && styles.broadcastingButton]} 
+
+      <TouchableOpacity
+        style={styles.broadcastButton}
         onPress={toggleBroadcast}
       >
-        <Text style={styles.broadcastButtonText}>
-          {isBroadcasting ? "Stop Broadcasting" : "Find Me"}
-        </Text>
+        <Text>{isBroadcasting ? "Stop Broadcasting" : "Find Me"}</Text>
       </TouchableOpacity>
 
       <GestureDetector gesture={gesture}>
@@ -385,17 +511,21 @@ export default function MapScreen() {
           <View style={styles.bottomSheetHeader}>
             <View style={styles.bottomSheetHandle} />
             <View style={styles.bottomSheetTitleContainer}>
-              <Text style={styles.bottomSheetTitle}>Friends</Text>
+              <Text style={{ fontWeight: "bold", fontSize: 20 }}>{title}</Text>
               <TouchableOpacity>
                 <Text style={styles.addFriendsButton}>Add friends</Text>
               </TouchableOpacity>
             </View>
           </View>
+          <View style={styles.divider} />
           <FlatList
             data={MOCK_FRIENDS}
-            renderItem={renderFriendItem}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.friendsList}
+            renderItem={({ item, index }) => renderFriendItem({ item, index })}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={[
+              styles.friendsList,
+              { paddingBottom: insets.bottom + 20 },
+            ]}
           />
         </Animated.View>
       </GestureDetector>
@@ -408,194 +538,225 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F59E93",
   },
-  logoContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    alignItems: 'flex-start',
-    zIndex: 1,
-    paddingLeft: 20,
-  },
-  logoBackground: {
-    backgroundColor: 'white',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  logoText: {
-    fontFamily: 'SourceCodePro-Medium',
-    fontSize: 32,
-    color: '#F59E93',
-    letterSpacing: 1,
-    textTransform: 'lowercase',
-  },
+
   map: {
     width: "100%",
     height: "100%",
   },
-  broadcastButton: {
-    position: "absolute",
-    bottom: "25%",
-    alignSelf: "center",
-    backgroundColor: "#F59E93",
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 30,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
-    minWidth: 200,
-  },
-  broadcastingButton: {
-    backgroundColor: "#FFB380",
-  },
-  broadcastButtonText: {
-    color: "#333",
-    fontSize: 18,
-    fontWeight: "600",
-    textAlign: "center",
-  },
+
   bottomSheetContainer: {
-    height: BOTTOM_SHEET_HEIGHT,
-    width: '100%',
-    backgroundColor: 'white',
-    position: 'absolute',
-    bottom: -BOTTOM_SHEET_HEIGHT + 100,
+    width: "100%",
+    backgroundColor: "white",
+    position: "absolute",
+    bottom: 40,
     borderRadius: 25,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: -4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    elevation: 10,
   },
   bottomSheetHeader: {
-    width: '100%',
-    backgroundColor: 'white',
+    width: "100%",
+    backgroundColor: "white",
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
-    paddingBottom: 16,
+    paddingBottom: 1,
   },
   bottomSheetHandle: {
-    width: 40,
+    width: 50,
     height: 4,
-    backgroundColor: '#DDD',
+    backgroundColor: "#DDD",
     borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 8,
-    marginBottom: 16,
+    alignSelf: "center",
+    marginTop: 10,
+    marginBottom: 10,
   },
   bottomSheetTitleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
   },
-  bottomSheetTitle: {
-    fontFamily: 'SourceCodePro-Medium',
-    fontSize: 24,
-    color: '#333',
-  },
   addFriendsButton: {
+    // fix because it's not a button
     fontSize: 16,
-    color: '#F59E93',
-    fontWeight: '500',
+    color: "#F59E93",
+    fontWeight: "500",
   },
   friendsList: {
     padding: 16,
   },
   friendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 7,
+  },
+  friendInfo: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  friendName: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#111",
+  },
+  friendMeta: {
+    fontSize: 14,
+    color: "#888",
+    marginTop: 2,
+  },
+  friendDistance: {
+    fontSize: 15,
+    color: "#555",
+    minWidth: 48,
+    textAlign: "right",
+    fontWeight: "400",
   },
   avatarContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#FF7E70',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#E2E2E2",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
   },
   avatarText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  friendInfo: {
-    flex: 1,
-  },
-  friendName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-  },
-  friendDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  friendDistance: {
-    fontSize: 14,
-    color: '#666',
-  },
-  friendPing: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 4,
+    fontWeight: "600",
+    color: "white",
   },
   markerContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 20,
+    backgroundColor: "transparent",
   },
-  markerAvatar: {
+  markerAvatarDoNotDisturb: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F59E93',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'white',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    backgroundColor: "#BEBEBE",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2.5,
+    borderColor: "#C30606",
+  },
+  markerAvatarAvailable: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#BEBEBE",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2.5,
+    borderColor: "#9BBD93",
+    shadowColor: "#333",
   },
   markerText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "white",
   },
   friendChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F59E93',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F59E93",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     gap: 4,
+  },
+  avatarListDoNotDisturb: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#BEBEBE",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    borderWidth: 3,
+    borderColor: "#C30606",
+    shadowColor: "#333",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  avatarListAvailable: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#BEBEBE",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    borderWidth: 3,
+    borderColor: "#9BBD93",
+    shadowColor: "#333",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#D3D3D3",
+    width: "100%",
+    marginTop: 12,
+    marginBottom: 0,
+  },
+  avatarContainerDoNotDisturb: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#E2E2E2",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    borderWidth: 1.5,
+    borderColor: "#C30606",
+    shadowColor: "#333",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  avatarContainerAvailable: {
+    width: 50,
+    height: 50,
+    borderRadius: 20,
+    backgroundColor: "#E2E2E2",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    borderWidth: 1.5,
+    borderColor: "#1DB954", // Spotify green, or use your preferred green
+    shadowColor: "#333",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  addHangoutButton: {
+    position: "absolute",
+    left: "50%",
+    transform: [{ translateX: -80 }], // half of button width for perfect centering
+    zIndex: 20,
+    width: 160,
+    height: 40,
+    backgroundColor: "#F59E93",
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#333",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  addHangoutButtonText: {
+    color: "white",
+    fontWeight: "700",
+    fontSize: 16,
+    letterSpacing: 1,
+    textTransform: "capitalize",
   },
 });
