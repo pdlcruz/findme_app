@@ -1,84 +1,9 @@
-// import { Image } from 'expo-image';
-// import { Platform, StyleSheet } from 'react-native';
 
-// import { HelloWave } from '@/components/HelloWave';
-// import ParallaxScrollView from '@/components/ParallaxScrollView';
-// import { ThemedText } from '@/components/ThemedText';
-// import { ThemedView } from '@/components/ThemedView';
-
-// export default function HomeScreen() {
-//   return (
-//     <ParallaxScrollView
-//       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-//       headerImage={
-//         <Image
-//           source={require('@/assets/images/partial-react-logo.png')}
-//           style={styles.reactLogo}
-//         />
-//       }>
-//       <ThemedView style={styles.titleContainer}>
-//         <ThemedText type="title">Welcome!</ThemedText>
-//         <HelloWave />
-//       </ThemedView>
-//       <ThemedView style={styles.stepContainer}>
-//         <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-//         <ThemedText>
-//           Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-//           Press{' '}
-//           <ThemedText type="defaultSemiBold">
-//             {Platform.select({
-//               ios: 'cmd + d',
-//               android: 'cmd + m',
-//               web: 'F12',
-//             })}
-//           </ThemedText>{' '}
-//           to open developer tools.
-//         </ThemedText>
-//       </ThemedView>
-//       <ThemedView style={styles.stepContainer}>
-//         <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-//         <ThemedText>
-//           {`Tap the Explore tab to learn more about what's included in this starter app.`}
-//         </ThemedText>
-//       </ThemedView>
-//       <ThemedView style={styles.stepContainer}>
-//         <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-//         <ThemedText>
-//           {`When you're ready, run `}
-//           <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-//           <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-//           <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-//           <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-//         </ThemedText>
-//       </ThemedView>
-//     </ParallaxScrollView>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   titleContainer: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     gap: 8,
-//   },
-//   stepContainer: {
-//     gap: 8,
-//     marginBottom: 8,
-//   },
-//   reactLogo: {
-//     height: 178,
-//     width: 290,
-//     bottom: 0,
-//     left: 0,
-//     position: 'absolute',
-//   },
-// });
-
-
+import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { useEffect, useState } from "react";
-import { Dimensions, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Dimensions, FlatList, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import Animated, {
@@ -88,7 +13,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Configure notifications
 Notifications.setNotificationHandler({
@@ -110,8 +35,8 @@ const MOCK_FRIENDS = [
     distance: '0.3 mi',
     lastPing: '2m ago',
     location: {
-      latitude: 37.7749,
-      longitude: -122.4194,
+      latitude: 37.424107,
+      longitude: -122.166077,
     }
   },
   { 
@@ -120,8 +45,8 @@ const MOCK_FRIENDS = [
     distance: '0.8 mi',
     lastPing: '30s ago',
     location: {
-      latitude: 37.7833,
-      longitude: -122.4167,
+      latitude: 37.425892,
+      longitude: -122.164123,
     }
   },
   { 
@@ -130,8 +55,8 @@ const MOCK_FRIENDS = [
     distance: '1.2 mi',
     lastPing: '5m ago',
     location: {
-      latitude: 37.7855,
-      longitude: -122.4067,
+      latitude: 37.422345,
+      longitude: -122.167891,
     }
   },
   { 
@@ -140,8 +65,8 @@ const MOCK_FRIENDS = [
     distance: '1.5 mi',
     lastPing: '1m ago',
     location: {
-      latitude: 37.7875,
-      longitude: -122.4000,
+      latitude: 37.426789,
+      longitude: -122.162345,
     }
   },
   { 
@@ -150,15 +75,170 @@ const MOCK_FRIENDS = [
     distance: '2.0 mi',
     lastPing: '45s ago',
     location: {
-      latitude: 37.7895,
-      longitude: -122.3900,
+      latitude: 37.421234,
+      longitude: -122.169012,
+    }
+  },
+  { 
+    id: '6', 
+    name: 'Lisa Anderson', 
+    distance: '0.5 mi',
+    lastPing: '3m ago',
+    location: {
+      latitude: 37.424567,
+      longitude: -122.165432,
+    }
+  },
+  { 
+    id: '7', 
+    name: 'James Wilson', 
+    distance: '0.9 mi',
+    lastPing: '1m ago',
+    location: {
+      latitude: 37.425678,
+      longitude: -122.163456,
+    }
+  },
+  { 
+    id: '8', 
+    name: 'Sophia Chen', 
+    distance: '1.1 mi',
+    lastPing: '2m ago',
+    location: {
+      latitude: 37.423456,
+      longitude: -122.168901,
+    }
+  },
+  { 
+    id: '9', 
+    name: 'Daniel Kim', 
+    distance: '1.3 mi',
+    lastPing: '4m ago',
+    location: {
+      latitude: 37.426123,
+      longitude: -122.161234,
+    }
+  },
+  { 
+    id: '10', 
+    name: 'Olivia Martinez', 
+    distance: '1.7 mi',
+    lastPing: '30s ago',
+    location: {
+      latitude: 37.421789,
+      longitude: -122.168345,
+    }
+  },
+  { 
+    id: '11', 
+    name: 'Ethan Taylor', 
+    distance: '0.4 mi',
+    lastPing: '2m ago',
+    location: {
+      latitude: 37.424789,
+      longitude: -122.166789,
+    }
+  },
+  { 
+    id: '12', 
+    name: 'Ava Johnson', 
+    distance: '0.7 mi',
+    lastPing: '1m ago',
+    location: {
+      latitude: 37.425234,
+      longitude: -122.164567,
+    }
+  },
+  { 
+    id: '13', 
+    name: 'Noah Garcia', 
+    distance: '1.0 mi',
+    lastPing: '3m ago',
+    location: {
+      latitude: 37.423789,
+      longitude: -122.167234,
+    }
+  },
+  { 
+    id: '14', 
+    name: 'Isabella Rodriguez', 
+    distance: '1.4 mi',
+    lastPing: '45s ago',
+    location: {
+      latitude: 37.426456,
+      longitude: -122.162789,
+    }
+  },
+  { 
+    id: '15', 
+    name: 'Liam Thompson', 
+    distance: '1.8 mi',
+    lastPing: '2m ago',
+    location: {
+      latitude: 37.421567,
+      longitude: -122.169456,
+    }
+  },
+  { 
+    id: '16', 
+    name: 'Mia White', 
+    distance: '0.6 mi',
+    lastPing: '1m ago',
+    location: {
+      latitude: 37.424345,
+      longitude: -122.165678,
+    }
+  },
+  { 
+    id: '17', 
+    name: 'Lucas Harris', 
+    distance: '0.9 mi',
+    lastPing: '3m ago',
+    location: {
+      latitude: 37.425789,
+      longitude: -122.163789,
+    }
+  },
+  { 
+    id: '18', 
+    name: 'Charlotte Clark', 
+    distance: '1.2 mi',
+    lastPing: '2m ago',
+    location: {
+      latitude: 37.423234,
+      longitude: -122.168567,
+    }
+  },
+  { 
+    id: '19', 
+    name: 'Mason Lewis', 
+    distance: '1.6 mi',
+    lastPing: '30s ago',
+    location: {
+      latitude: 37.426789,
+      longitude: -122.161567,
+    }
+  },
+  { 
+    id: '20', 
+    name: 'Amelia Walker', 
+    distance: '1.9 mi',
+    lastPing: '1m ago',
+    location: {
+      latitude: 37.421345,
+      longitude: -122.169789,
     }
   },
 ];
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const BOTTOM_SHEET_HEIGHT = SCREEN_HEIGHT * 0.7;
-const MAX_TRANSLATE_Y = -BOTTOM_SHEET_HEIGHT + 50;
+const BOTTOM_SHEET_HEIGHT = SCREEN_HEIGHT; // Full screen height
+const MAX_TRANSLATE_Y = -SCREEN_HEIGHT * 0.5; // Limit to 1/2 of screen height when dragged up
+const ANDROID_TOP_PADDING = 60; // Base padding for Android
+const MAP_CONTAINER_HEIGHT = Platform.select({
+  android: (SCREEN_HEIGHT - ANDROID_TOP_PADDING) * 0.75,
+  default: SCREEN_HEIGHT * 0.75,
+}); // 3/4 of screen height, accounting for Android padding
 
 export default function MapScreen() {
   const [isBroadcasting, setIsBroadcasting] = useState(false);
@@ -166,11 +246,14 @@ export default function MapScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
 
-  // Adjust top inset for Android, but not for iOS
-  const topInset = Platform.select({
-    android: 0, // Remove top safe area for Android
-    ios: 0, // Remove top safe area for iOS (map goes to top)
-    default: insets.top, // fallback
+  const androidTopPadding = Platform.select({
+    android: insets.top,
+    default: 0,
+  });
+
+  const BOTTOM_SHEET_TOP = Platform.select({
+    android: MAP_CONTAINER_HEIGHT + androidTopPadding,
+    default: MAP_CONTAINER_HEIGHT,
   });
 
   const translateY = useSharedValue(0);
@@ -245,6 +328,25 @@ export default function MapScreen() {
     });
   };
 
+  const openDirections = (friend: typeof MOCK_FRIENDS[0]) => {
+    const scheme = Platform.select({
+      ios: 'maps:',
+      android: 'geo:',
+    });
+    const url = Platform.select({
+      ios: `${scheme}?daddr=${friend.location.latitude},${friend.location.longitude}`,
+      android: `${scheme}0,0?q=${friend.location.latitude},${friend.location.longitude}(${friend.name})`,
+    });
+
+    Linking.canOpenURL(url!).then((supported) => {
+      if (supported) {
+        Linking.openURL(url!);
+      } else {
+        console.log("Don't know how to open URI: " + url);
+      }
+    });
+  };
+
   const renderFriendItem = ({ item }: { item: typeof MOCK_FRIENDS[0] }) => {
     const initials = item.name
       .split(' ')
@@ -264,6 +366,12 @@ export default function MapScreen() {
             <Text style={styles.friendPing}>• {item.lastPing}</Text>
           </View>
         </View>
+        <TouchableOpacity 
+          style={styles.directionsButton}
+          onPress={() => openDirections(item)}
+        >
+          <Ionicons name="navigate" size={24} color="#F59E93" />
+        </TouchableOpacity>
       </View>
     );
   };
@@ -292,41 +400,33 @@ export default function MapScreen() {
 
   return Platform.OS === 'ios' ? (
     <View style={styles.container}>
-      <MapView
-        style={styles.map}
-        provider={undefined} // Use Apple Maps on iOS
-        showsUserLocation={true}
-        showsMyLocationButton={true}
-        initialRegion={location ? {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        } : undefined}
-      >
-        {MOCK_FRIENDS.map(renderFriendMarker)}
-      </MapView>
-      <View style={[styles.logoContainer, { 
-        paddingTop: Platform.select({ 
-          android: insets.top + 16, 
-          default: insets.top 
-        }) 
-      }]}>
-        <View style={styles.logoBackground}>
-          <Text style={styles.logoText}>salmon</Text>
-        </View>
+      <View style={[styles.mapContainer, { marginTop: 0 }]}>
+        <MapView
+          style={styles.map}
+          provider={undefined} // Use Apple Maps on iOS
+          showsUserLocation={true}
+          showsMyLocationButton={true}
+          initialRegion={location ? {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          } : undefined}
+        >
+          {MOCK_FRIENDS.map(renderFriendMarker)}
+        </MapView>
+        <TouchableOpacity 
+          style={[styles.broadcastButton, isBroadcasting && styles.broadcastingButton]} 
+          onPress={toggleBroadcast}
+        >
+          <Text style={[styles.broadcastButtonText, isBroadcasting && styles.broadcastingButtonText]}>
+            {isBroadcasting ? "Stop Sharing" : "Find Me"}
+          </Text>
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity 
-        style={[styles.broadcastButton, isBroadcasting && styles.broadcastingButton]} 
-        onPress={toggleBroadcast}
-      >
-        <Text style={styles.broadcastButtonText}>
-          {isBroadcasting ? "Stop Broadcasting" : "Find Me"}
-        </Text>
-      </TouchableOpacity>
 
       <GestureDetector gesture={gesture}>
-        <Animated.View style={[styles.bottomSheetContainer, rBottomSheetStyle]}>
+        <Animated.View style={[styles.bottomSheetContainer, rBottomSheetStyle, { top: BOTTOM_SHEET_TOP }]}>
           <View style={styles.bottomSheetHeader}>
             <View style={styles.bottomSheetHandle} />
             <View style={styles.bottomSheetTitleContainer}>
@@ -346,42 +446,34 @@ export default function MapScreen() {
       </GestureDetector>
     </View>
   ) : (
-    <SafeAreaView style={[styles.container, { paddingTop: topInset }]}>
-      <MapView
-        style={[styles.map, { marginTop: -topInset }]}
-        provider={PROVIDER_GOOGLE} // Use Google Maps on Android
-        showsUserLocation={true}
-        showsMyLocationButton={true}
-        initialRegion={location ? {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        } : undefined}
-      >
-        {MOCK_FRIENDS.map(renderFriendMarker)}
-      </MapView>
-      <View style={[styles.logoContainer, { 
-        paddingTop: Platform.select({ 
-          android: insets.top + 16, 
-          default: insets.top 
-        }) 
-      }]}>
-        <View style={styles.logoBackground}>
-          <Text style={styles.logoText}>salmon</Text>
-        </View>
+    <View style={[styles.container, { paddingTop: androidTopPadding }]}>
+      <View style={[styles.mapContainer, { marginTop: 0 }]}>
+        <MapView
+          style={[styles.map]}
+          provider={PROVIDER_GOOGLE} // Use Google Maps on Android
+          showsUserLocation={true}
+          showsMyLocationButton={true}
+          initialRegion={location ? {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          } : undefined}
+        >
+          {MOCK_FRIENDS.map(renderFriendMarker)}
+        </MapView>
+        <TouchableOpacity 
+          style={[styles.broadcastButton, isBroadcasting && styles.broadcastingButton]} 
+          onPress={toggleBroadcast}
+        >
+          <Text style={[styles.broadcastButtonText, isBroadcasting && styles.broadcastingButtonText]}>
+            {isBroadcasting ? "Stop Sharing" : "Find Me"}
+          </Text>
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity 
-        style={[styles.broadcastButton, isBroadcasting && styles.broadcastingButton]} 
-        onPress={toggleBroadcast}
-      >
-        <Text style={styles.broadcastButtonText}>
-          {isBroadcasting ? "Stop Broadcasting" : "Find Me"}
-        </Text>
-      </TouchableOpacity>
 
       <GestureDetector gesture={gesture}>
-        <Animated.View style={[styles.bottomSheetContainer, rBottomSheetStyle]}>
+        <Animated.View style={[styles.bottomSheetContainer, rBottomSheetStyle, { top: BOTTOM_SHEET_TOP }]}>
           <View style={styles.bottomSheetHeader}>
             <View style={styles.bottomSheetHandle} />
             <View style={styles.bottomSheetTitleContainer}>
@@ -399,7 +491,7 @@ export default function MapScreen() {
           />
         </Animated.View>
       </GestureDetector>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -408,34 +500,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F59E93",
   },
-  logoContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    alignItems: 'flex-start',
-    zIndex: 1,
-    paddingLeft: 20,
-  },
-  logoBackground: {
-    backgroundColor: 'white',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+  mapContainer: {
+    height: MAP_CONTAINER_HEIGHT,
+    overflow: 'hidden',
+    borderRadius: 20,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  logoText: {
-    fontFamily: 'SourceCodePro-Medium',
-    fontSize: 32,
-    color: '#F59E93',
-    letterSpacing: 1,
-    textTransform: 'lowercase',
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   map: {
     width: "100%",
@@ -443,12 +519,12 @@ const styles = StyleSheet.create({
   },
   broadcastButton: {
     position: "absolute",
-    bottom: "25%",
+    bottom: 20,
     alignSelf: "center",
-    backgroundColor: "#F59E93",
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 30,
+    backgroundColor: "#F59E93", // Salmon background for Find Me
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 25,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -457,23 +533,27 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
     elevation: 8,
-    minWidth: 200,
+    minWidth: 150,
   },
   broadcastingButton: {
-    backgroundColor: "#FFB380",
+    backgroundColor: "#F5F5F5", // Grey background for Stop Sharing
+    borderWidth: 2,
+    borderColor: "#F59E93", // Salmon border
   },
   broadcastButtonText: {
-    color: "#333",
-    fontSize: 18,
+    color: "#FFFFFF", // White text for Find Me
+    fontSize: 16,
     fontWeight: "600",
     textAlign: "center",
+  },
+  broadcastingButtonText: {
+    color: "#F59E93", // Salmon text for Stop Sharing
   },
   bottomSheetContainer: {
     height: BOTTOM_SHEET_HEIGHT,
     width: '100%',
     backgroundColor: 'white',
     position: 'absolute',
-    bottom: -BOTTOM_SHEET_HEIGHT + 100,
     borderRadius: 25,
     shadowColor: "#000",
     shadowOffset: {
@@ -597,5 +677,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     gap: 4,
+  },
+  directionsButton: {
+    padding: 8,
+    marginLeft: 8,
   },
 });
