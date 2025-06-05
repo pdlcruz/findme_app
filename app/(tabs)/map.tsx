@@ -1,8 +1,7 @@
-
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dimensions, FlatList, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
@@ -232,7 +231,11 @@ const MOCK_FRIENDS = [
 ];
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const BOTTOM_SHEET_HEIGHT = SCREEN_HEIGHT; // Full screen height
+const TAB_BAR_HEIGHT = Platform.select({
+  ios: 88,
+  default: 60,
+});
+const BOTTOM_SHEET_HEIGHT = SCREEN_HEIGHT * 0.75 - TAB_BAR_HEIGHT; // Full screen height minus tab bar
 const MAX_TRANSLATE_Y = -SCREEN_HEIGHT * 0.5; // Limit to 1/2 of screen height when dragged up
 const ANDROID_TOP_PADDING = 60; // Base padding for Android
 const MAP_CONTAINER_HEIGHT = Platform.select({
@@ -244,7 +247,9 @@ export default function MapScreen() {
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [mapType, setMapType] = useState<'standard' | 'hybrid' | 'hybridFlyover' | 'mutedStandard'>('standard');
   const insets = useSafeAreaInsets();
+  const mapRef = useRef<MapView>(null);
 
   const androidTopPadding = Platform.select({
     android: insets.top,
@@ -334,7 +339,7 @@ export default function MapScreen() {
       android: 'geo:',
     });
     const url = Platform.select({
-      ios: `${scheme}?daddr=${friend.location.latitude},${friend.location.longitude}`,
+      ios: `${scheme}?ll=${friend.location.latitude},${friend.location.longitude}&q=${encodeURIComponent(friend.name)}`,
       android: `${scheme}0,0?q=${friend.location.latitude},${friend.location.longitude}(${friend.name})`,
     });
 
@@ -388,6 +393,26 @@ export default function MapScreen() {
         key={friend.id}
         coordinate={friend.location}
         anchor={{ x: 0.5, y: 0.5 }}
+        onPress={() => {
+          if (Platform.OS === 'ios') {
+            mapRef.current?.animateToRegion({
+              latitude: friend.location.latitude,
+              longitude: friend.location.longitude,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            }, 1000);
+          } else {
+            mapRef.current?.animateCamera({
+              center: {
+                latitude: friend.location.latitude,
+                longitude: friend.location.longitude,
+              },
+              zoom: 15,
+              heading: 0,
+              pitch: 0,
+            }, { duration: 1000 });
+          }
+        }}
       >
         <View style={styles.markerContainer}>
           <View style={styles.markerAvatar}>
@@ -398,14 +423,55 @@ export default function MapScreen() {
     );
   };
 
+  const centerOnUserLocation = () => {
+    if (location && mapRef.current) {
+      if (Platform.OS === 'ios') {
+        mapRef.current.animateToRegion({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }, 1000);
+      } else {
+        mapRef.current.animateCamera({
+          center: {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          },
+          zoom: 15,
+          heading: 0,
+          pitch: 0,
+        }, { duration: 1000 });
+      }
+    }
+  };
+
+  const renderMapTypeButton = (type: typeof mapType, icon: string) => (
+    <TouchableOpacity 
+      style={[styles.mapTypeButton, mapType === type && styles.mapTypeButtonActive]}
+      onPress={() => setMapType(type)}
+    >
+      <Ionicons name={icon as any} size={20} color={mapType === type ? "#F59E93" : "#333"} />
+    </TouchableOpacity>
+  );
+
   return Platform.OS === 'ios' ? (
     <View style={styles.container}>
       <View style={[styles.mapContainer, { marginTop: 0 }]}>
         <MapView
+          ref={mapRef}
           style={styles.map}
-          provider={undefined} // Use Apple Maps on iOS
+          provider={undefined}
           showsUserLocation={true}
-          showsMyLocationButton={true}
+          showsPointsOfInterest={true}
+          showsScale={true}
+          showsBuildings={true}
+          showsIndoors={true}
+          loadingEnabled={true}
+          loadingIndicatorColor="#F59E93"
+          loadingBackgroundColor="#F59E93"
+          tintColor="#F59E93"
+          mapType={Platform.OS === 'ios' ? (mapType === 'hybrid' ? 'hybridFlyover' : mapType) : (mapType === 'mutedStandard' ? 'standard' : mapType === 'hybridFlyover' ? 'hybrid' : mapType)}
           initialRegion={location ? {
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
@@ -415,6 +481,17 @@ export default function MapScreen() {
         >
           {MOCK_FRIENDS.map(renderFriendMarker)}
         </MapView>
+        <View style={styles.mapTypeContainer}>
+          {renderMapTypeButton('standard', 'map')}
+          {renderMapTypeButton('hybrid', 'globe-outline')}
+          {renderMapTypeButton('mutedStandard', 'map-outline')}
+        </View>
+        <TouchableOpacity 
+          style={[styles.locationButton, { bottom: 20 }]}
+          onPress={centerOnUserLocation}
+        >
+          <Ionicons name="compass" size={24} color="#F59E93" />
+        </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.broadcastButton, isBroadcasting && styles.broadcastingButton]} 
           onPress={toggleBroadcast}
@@ -449,19 +526,34 @@ export default function MapScreen() {
     <View style={[styles.container, { paddingTop: androidTopPadding }]}>
       <View style={[styles.mapContainer, { marginTop: 0 }]}>
         <MapView
+          ref={mapRef}
           style={[styles.map]}
-          provider={PROVIDER_GOOGLE} // Use Google Maps on Android
+          provider={PROVIDER_GOOGLE}
           showsUserLocation={true}
-          showsMyLocationButton={true}
-          initialRegion={location ? {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421,
+          showsPointsOfInterest={true}
+          showsScale={true}
+          showsBuildings={true}
+          showsIndoors={true}
+          loadingEnabled={true}
+          loadingIndicatorColor="#F59E93"
+          loadingBackgroundColor="#F59E93"
+          mapType={Platform.OS === 'ios' ? (mapType === 'hybrid' ? 'hybridFlyover' : mapType) : (mapType === 'mutedStandard' ? 'standard' : mapType === 'hybridFlyover' ? 'hybrid' : mapType)}
+          initialCamera={location ? {
+            center: {
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+            },
+            zoom: 15,
+            heading: 0,
+            pitch: 0,
           } : undefined}
         >
           {MOCK_FRIENDS.map(renderFriendMarker)}
         </MapView>
+        <View style={styles.mapTypeContainer}>
+          {renderMapTypeButton('standard', 'map')}
+          {renderMapTypeButton('hybrid', 'globe-outline')}
+        </View>
         <TouchableOpacity 
           style={[styles.broadcastButton, isBroadcasting && styles.broadcastingButton]} 
           onPress={toggleBroadcast}
@@ -681,5 +773,52 @@ const styles = StyleSheet.create({
   directionsButton: {
     padding: 8,
     marginLeft: 8,
+  },
+  locationButton: {
+    position: 'absolute',
+    right: 20,
+    backgroundColor: 'white',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  mapTypeContainer: {
+    position: 'absolute',
+    right: 20,
+    bottom: 80,
+    backgroundColor: 'white',
+    borderRadius: 22,
+    padding: 4,
+    width: 44,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  mapTypeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 2,
+  },
+  mapTypeButtonActive: {
+    backgroundColor: '#F5F5F5',
   },
 });
