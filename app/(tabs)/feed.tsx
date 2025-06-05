@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { collection, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,37 +10,43 @@ export default function FeedScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const user = auth.currentUser;
+  const [friends, setFriends] = useState<string[]>([]);
+  const [friendMap, setFriendMap] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const fetchFriends = async () => {
+      if (!user) return;
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const friendsArr = userDoc.exists() && Array.isArray(userDoc.data().friends) ? userDoc.data().friends : [];
+      setFriends(friendsArr);
+      // Fetch display names for all friends and self
+      const allUids = [user.uid, ...friendsArr];
+      const friendDocs = await Promise.all(allUids.map(uid => getDoc(doc(db, 'users', uid))));
+      const map: Record<string, string> = {};
+      friendDocs.forEach(d => {
+        if (d.exists()) map[d.id] = d.data().displayName || d.data().email;
+      });
+      setFriendMap(map);
+    };
+    fetchFriends();
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    // Listen for events where user is creator or invited
+    // Listen for events where creatorId is in [user.uid, ...friends]
+    const allUids = [user.uid, ...friends];
+    if (allUids.length === 0) return;
     const q = query(
       collection(db, 'events'),
-      where('invitedFriends', 'array-contains', user.email)
+      where('creatorId', 'in', allUids)
     );
-    const q2 = query(
-      collection(db, 'events'),
-      where('creatorId', '==', user.uid)
-    );
-    const unsub1 = onSnapshot(q, (snapshot) => {
-      setEvents((prev) => {
-        const invited = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Merge with creator events below
-        return [...prev.filter(e => e.creatorId === user.uid), ...invited];
-      });
+    const unsub = onSnapshot(q, (snapshot) => {
+      setEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
     }, err => setError(err.message));
-    const unsub2 = onSnapshot(q2, (snapshot) => {
-      setEvents((prev) => {
-        const created = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Merge with invited events above
-        return [...created, ...prev.filter(e => e.creatorId !== user.uid)];
-      });
-      setLoading(false);
-    }, err => setError(err.message));
-    return () => { unsub1(); unsub2(); };
-  }, [user]);
+    return () => { unsub(); };
+  }, [user, friends]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -64,9 +70,9 @@ export default function FeedScreen() {
       <Text style={styles.location}>{item.locationDescription || item.location}</Text>
       {item.invitedFriends && (
         <View style={styles.membersContainer}>
-          {item.invitedFriends.map((member: string, index: number) => (
-            <View key={index} style={styles.memberTag}>
-              <Text style={styles.memberName}>{member}</Text>
+          {item.invitedFriends.map((uid: string, index: number) => (
+            <View key={uid} style={styles.memberTag}>
+              <Text style={styles.memberName}>{friendMap[uid] || uid}</Text>
             </View>
           ))}
         </View>

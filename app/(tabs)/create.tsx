@@ -1,8 +1,7 @@
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { useState } from 'react';
-import { Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MapView, { LatLng, Marker } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { auth, db } from '../../lib/firebaseConfig';
@@ -15,6 +14,32 @@ export default function CreateEventScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [duration, setDuration] = useState('1 hour');
+  const [friendList, setFriendList] = useState<any[]>([]);
+  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchFriends = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const friends = userDoc.exists() && Array.isArray(userDoc.data().friends) ? userDoc.data().friends : [];
+      if (friends.length) {
+        // Fetch friend user docs
+        const friendDocs = await Promise.all(friends.map((uid: string) => getDoc(doc(db, 'users', uid))));
+        setFriendList(friendDocs.filter(d => d.exists()).map(d => d.data()));
+      } else {
+        setFriendList([]);
+      }
+    };
+    fetchFriends();
+  }, []);
+
+  const handleSelectFriend = (uid: string) => {
+    setSelectedFriends(prev => prev.includes(uid) ? prev.filter(f => f !== uid) : [...prev, uid]);
+  };
+
+  const handleSelectDuration = (d: string) => setDuration(d);
 
   const handleMapPress = (e: any) => {
     setSelectedLocation(e.nativeEvent.coordinate);
@@ -43,7 +68,8 @@ export default function CreateEventScreen() {
         name: eventName,
         locationDescription: locationText,
         location: selectedLocation,
-        invitedFriends: ['john@example.com', 'emma@example.com'], // TODO: Replace with real invited friends
+        invitedFriends: selectedFriends,
+        duration,
         creatorId: user.uid,
         creatorEmail: user.email,
         createdAt: serverTimestamp(),
@@ -52,6 +78,8 @@ export default function CreateEventScreen() {
       setEventName('');
       setLocationText('');
       setSelectedLocation(null);
+      setSelectedFriends([]);
+      setDuration('1 hour');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -122,20 +150,18 @@ export default function CreateEventScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Invite Friends</Text>
             <View style={styles.friendsContainer}>
-              {/* Mock friend chips */}
-              {['John Smith', 'Emma Wilson', 'Michael Brown'].map((friend, index) => (
-                <TouchableOpacity key={index} style={styles.friendChip}>
-                  <Text style={styles.friendChipText}>{friend}</Text>
-                  <IconSymbol name="xmark.circle.fill" size={16} color="#666" />
+              {friendList.map((friend, index) => (
+                <TouchableOpacity
+                  key={friend.uid}
+                  style={[styles.friendChip, selectedFriends.includes(friend.uid) && { backgroundColor: '#F59E93', opacity: 1 }]}
+                  onPress={() => handleSelectFriend(friend.uid)}
+                >
+                  <Text style={styles.friendChipText}>{friend.displayName || friend.email}</Text>
+                  {selectedFriends.includes(friend.uid) && (
+                    <Ionicons name="checkmark-circle" size={16} color="#fff" />
+                  )}
                 </TouchableOpacity>
               ))}
-              <TouchableOpacity style={styles.addFriendButton}>
-                {Platform.OS === 'ios' ? (
-                  <Ionicons name="person-add" size={24} color="#F59E93" />
-                ) : (
-                  <MaterialIcons name="person-add" size={24} color="#F59E93" />
-                )}
-              </TouchableOpacity>
             </View>
           </View>
 
@@ -143,18 +169,15 @@ export default function CreateEventScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Duration</Text>
             <View style={styles.durationContainer}>
-              <TouchableOpacity style={styles.durationButton}>
-                <Text style={styles.durationButtonText}>1 hour</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.durationButton}>
-                <Text style={styles.durationButtonText}>2 hours</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.durationButton}>
-                <Text style={styles.durationButtonText}>3 hours</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.durationButton}>
-                <Text style={styles.durationButtonText}>Custom</Text>
-              </TouchableOpacity>
+              {['1 hour', '2 hours', '3 hours', 'Custom'].map((d) => (
+                <TouchableOpacity
+                  key={d}
+                  style={[styles.durationButton, duration === d && { backgroundColor: '#F59E93' }]}
+                  onPress={() => handleSelectDuration(d)}
+                >
+                  <Text style={[styles.durationButtonText, duration === d && { color: '#fff' }]}>{d}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
 
@@ -254,7 +277,7 @@ const styles = StyleSheet.create({
   friendChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F59E93',
+    backgroundColor: '#f5f5f5',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
@@ -263,9 +286,6 @@ const styles = StyleSheet.create({
   friendChipText: {
     fontSize: 14,
     color: '#333',
-  },
-  addFriendButton: {
-    padding: 8,
   },
   durationContainer: {
     flexDirection: 'row',
