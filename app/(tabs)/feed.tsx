@@ -1,58 +1,91 @@
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { collection, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-// Mock hangout groups
-const MOCK_HANGOUTS = [
-  {
-    id: '1',
-    name: 'Coffee Break',
-    members: ['John Smith', 'Emma Wilson'],
-    location: 'Starbucks Downtown',
-  },
-  {
-    id: '2',
-    name: 'Lunch Squad',
-    members: ['Michael Brown', 'Sarah Davis', 'David Lee'],
-    location: 'Central Park',
-  },
-  {
-    id: '3',
-    name: 'Study Group',
-    members: ['Lisa Anderson', 'James Taylor'],
-    location: 'University Library',
-  },
-  {
-    id: '4',
-    name: 'Gaming Night',
-    members: ['Rachel Green', 'Tom Harris', 'Anna White'],
-    location: 'Tom\'s Place',
-  },
-];
+import { auth, db } from '../../lib/firebaseConfig';
 
 export default function FeedScreen() {
-  const renderHangoutItem = ({ item }: { item: typeof MOCK_HANGOUTS[0] }) => (
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const user = auth.currentUser;
+
+  useEffect(() => {
+    if (!user) return;
+    setLoading(true);
+    // Listen for events where user is creator or invited
+    const q = query(
+      collection(db, 'events'),
+      where('invitedFriends', 'array-contains', user.email)
+    );
+    const q2 = query(
+      collection(db, 'events'),
+      where('creatorId', '==', user.uid)
+    );
+    const unsub1 = onSnapshot(q, (snapshot) => {
+      setEvents((prev) => {
+        const invited = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Merge with creator events below
+        return [...prev.filter(e => e.creatorId === user.uid), ...invited];
+      });
+      setLoading(false);
+    }, err => setError(err.message));
+    const unsub2 = onSnapshot(q2, (snapshot) => {
+      setEvents((prev) => {
+        const created = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Merge with invited events above
+        return [...created, ...prev.filter(e => e.creatorId !== user.uid)];
+      });
+      setLoading(false);
+    }, err => setError(err.message));
+    return () => { unsub1(); unsub2(); };
+  }, [user]);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'events', id));
+      setEvents(events => events.filter(e => e.id !== id));
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const renderEventItem = ({ item }: { item: any }) => (
     <View style={styles.hangoutCard}>
-      <Text style={styles.hangoutName}>{item.name}</Text>
-      <Text style={styles.location}>{item.location}</Text>
-      <View style={styles.membersContainer}>
-        {item.members.map((member, index) => (
-          <View key={index} style={styles.memberTag}>
-            <Text style={styles.memberName}>{member}</Text>
-          </View>
-        ))}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text style={styles.hangoutName}>{item.name}</Text>
+        {user && item.creatorId === user.uid && (
+          <TouchableOpacity onPress={() => handleDelete(item.id)}>
+            <Ionicons name="close-circle" size={22} color="#F59E93" />
+          </TouchableOpacity>
+        )}
       </View>
+      <Text style={styles.location}>{item.locationDescription || item.location}</Text>
+      {item.invitedFriends && (
+        <View style={styles.membersContainer}>
+          {item.invitedFriends.map((member: string, index: number) => (
+            <View key={index} style={styles.memberTag}>
+              <Text style={styles.memberName}>{member}</Text>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Current Hangouts</Text>
-      <FlatList
-        data={MOCK_HANGOUTS}
-        renderItem={renderHangoutItem}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContainer}
-      />
+      <Text style={styles.title}>Current Events</Text>
+      {error ? <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text> : null}
+      {loading ? <ActivityIndicator style={{ marginTop: 40 }} /> : (
+        <FlatList
+          data={events}
+          renderItem={renderEventItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.listContainer}
+        />
+      )}
     </SafeAreaView>
   );
 }

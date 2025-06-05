@@ -1,38 +1,122 @@
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { useState } from 'react';
+import { Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import MapView, { LatLng, Marker } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { auth, db } from '../../lib/firebaseConfig';
 
-export default function CreateHangoutScreen() {
+export default function CreateEventScreen() {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<LatLng | null>(null);
+  const [locationText, setLocationText] = useState('');
+  const [eventName, setEventName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleMapPress = (e: any) => {
+    setSelectedLocation(e.nativeEvent.coordinate);
+  };
+
+  const handlePinButton = () => {
+    setModalVisible(true);
+  };
+
+  const handleSaveLocation = () => {
+    setModalVisible(false);
+  };
+
+  const handleCreateEvent = async () => {
+    setError('');
+    setSuccess('');
+    if (!eventName || !locationText || !selectedLocation) {
+      setError('Please fill in all fields and drop a pin for the location.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('You must be signed in.');
+      await addDoc(collection(db, 'events'), {
+        name: eventName,
+        locationDescription: locationText,
+        location: selectedLocation,
+        invitedFriends: ['john@example.com', 'emma@example.com'], // TODO: Replace with real invited friends
+        creatorId: user.uid,
+        creatorEmail: user.email,
+        createdAt: serverTimestamp(),
+      });
+      setSuccess('Event created!');
+      setEventName('');
+      setLocationText('');
+      setSelectedLocation(null);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
-        <Text style={styles.title}>Create Hangout</Text>
+        <Text style={styles.title}>Create Event</Text>
         
         <View style={styles.formContainer}>
-          {/* Hangout Name */}
+          {/* Event Name */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Hangout Name</Text>
+            <Text style={styles.label}>Event Name</Text>
             <TextInput
               style={styles.input}
               placeholder="e.g., Coffee Break, Study Session"
               placeholderTextColor="#999"
+              value={eventName}
+              onChangeText={setEventName}
             />
           </View>
 
           {/* Location */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Location</Text>
+            <Text style={styles.label}>Name the location</Text>
             <View style={styles.locationInput}>
               <TextInput
                 style={[styles.input, styles.locationTextInput]}
-                placeholder="Enter location"
+                placeholder="e.g., Starbucks on Main St"
                 placeholderTextColor="#999"
+                value={locationText}
+                onChangeText={setLocationText}
               />
-              <TouchableOpacity style={styles.locationButton}>
-                <IconSymbol name="location.fill" size={24} color="#F59E93" />
+              <TouchableOpacity style={styles.locationButton} onPress={handlePinButton}>
+                <Ionicons name="pin-outline" size={24} color="#F59E93" />
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* Pin Drop Modal */}
+          <Modal visible={modalVisible} animationType="slide">
+            <View style={{ flex: 1 }}>
+              <MapView
+                style={{ flex: 1 }}
+                initialRegion={{
+                  latitude: 37.7749,
+                  longitude: -122.4194,
+                  latitudeDelta: 0.05,
+                  longitudeDelta: 0.05,
+                }}
+                onPress={handleMapPress}
+              >
+                {selectedLocation && <Marker coordinate={selectedLocation} />}
+              </MapView>
+              <TouchableOpacity style={styles.saveLocationButton} onPress={handleSaveLocation}>
+                <Text style={styles.saveLocationButtonText}>Save Location</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.cancelLocationButton} onPress={() => setModalVisible(false)}>
+                <Text style={styles.cancelLocationButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </Modal>
 
           {/* Friends Selection */}
           <View style={styles.inputGroup}>
@@ -46,7 +130,11 @@ export default function CreateHangoutScreen() {
                 </TouchableOpacity>
               ))}
               <TouchableOpacity style={styles.addFriendButton}>
-                <IconSymbol name="plus.circle.fill" size={24} color="#F59E93" />
+                {Platform.OS === 'ios' ? (
+                  <Ionicons name="person-add" size={24} color="#F59E93" />
+                ) : (
+                  <MaterialIcons name="person-add" size={24} color="#F59E93" />
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -71,8 +159,10 @@ export default function CreateHangoutScreen() {
           </View>
 
           {/* Create Button */}
-          <TouchableOpacity style={styles.createButton}>
-            <Text style={styles.createButtonText}>Create Hangout</Text>
+          {error ? <Text style={{ color: 'red', marginBottom: 10, textAlign: 'center' }}>{error}</Text> : null}
+          {success ? <Text style={{ color: 'green', marginBottom: 10, textAlign: 'center' }}>{success}</Text> : null}
+          <TouchableOpacity style={styles.createButton} onPress={handleCreateEvent} disabled={isLoading}>
+            <Text style={styles.createButtonText}>{isLoading ? 'Creating...' : 'Create Event'}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -125,6 +215,36 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: '#f5f5f5',
     borderRadius: 12,
+  },
+  saveLocationButton: {
+    position: 'absolute',
+    bottom: 80,
+    left: 20,
+    right: 20,
+    backgroundColor: '#F59E93',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  saveLocationButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  cancelLocationButton: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  cancelLocationButtonText: {
+    color: '#F59E93',
+    fontWeight: '600',
+    fontSize: 16,
   },
   friendsContainer: {
     flexDirection: 'row',

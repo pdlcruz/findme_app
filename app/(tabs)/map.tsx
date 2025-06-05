@@ -1,18 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
+import { collection, doc, getDoc, getDocs, updateDoc } from 'firebase/firestore';
 import { useEffect, useRef, useState } from "react";
-import { Dimensions, FlatList, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Dimensions, FlatList, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import Animated, {
-  Extrapolate,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
+    Extrapolate,
+    interpolate,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { auth, db } from '../../lib/firebaseConfig';
 
 // Configure notifications
 Notifications.setNotificationHandler({
@@ -250,6 +252,10 @@ export default function MapScreen() {
   const [mapType, setMapType] = useState<'standard' | 'hybrid' | 'hybridFlyover' | 'mutedStandard'>('standard');
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
+  const [addFriendModalVisible, setAddFriendModalVisible] = useState(false);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const user = auth.currentUser;
 
   const androidTopPadding = Platform.select({
     android: insets.top,
@@ -455,6 +461,37 @@ export default function MapScreen() {
     </TouchableOpacity>
   );
 
+  const openAddFriendModal = async () => {
+    setLoadingUsers(true);
+    setAddFriendModalVisible(true);
+    try {
+      const snapshot = await getDocs(collection(db, 'users'));
+      const users = snapshot.docs
+        .map(doc => doc.data())
+        .filter(u => u.uid !== user?.uid);
+      setAllUsers(users);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleAddFriend = async (friendUid: string) => {
+    if (!user) return;
+    const userRef = doc(db, 'users', user.uid);
+    const friendRef = doc(db, 'users', friendUid);
+    const userSnap = await getDoc(userRef);
+    const friendSnap = await getDoc(friendRef);
+    const currentFriends = userSnap.exists() && Array.isArray(userSnap.data().friends) ? userSnap.data().friends : [];
+    const friendFriends = friendSnap.exists() && Array.isArray(friendSnap.data().friends) ? friendSnap.data().friends : [];
+    await updateDoc(userRef, {
+      friends: [...new Set([...currentFriends, friendUid])],
+    });
+    await updateDoc(friendRef, {
+      friends: [...new Set([...friendFriends, user.uid])],
+    });
+    setAddFriendModalVisible(false);
+  };
+
   return Platform.OS === 'ios' ? (
     <View style={styles.container}>
       <View style={[styles.mapContainer, { marginTop: 0 }]}>
@@ -508,7 +545,7 @@ export default function MapScreen() {
             <View style={styles.bottomSheetHandle} />
             <View style={styles.bottomSheetTitleContainer}>
               <Text style={styles.bottomSheetTitle}>Friends</Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={openAddFriendModal}>
                 <Text style={styles.addFriendsButton}>Add friends</Text>
               </TouchableOpacity>
             </View>
@@ -521,6 +558,59 @@ export default function MapScreen() {
           />
         </Animated.View>
       </GestureDetector>
+
+      {addFriendModalVisible && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100, backgroundColor: 'white' }}>
+          <RNSafeAreaView style={{ flex: 1, padding: 24 }}>
+            <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 16 }}>Add a Friend</Text>
+            {loadingUsers ? <ActivityIndicator /> : (
+              <ScrollView>
+                {allUsers.map((item) => (
+                  <View
+                    key={item.uid || item.email}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: 12,
+                      borderBottomWidth: 1,
+                      borderColor: '#eee',
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 20,
+                        backgroundColor: '#F59E93',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: 12,
+                      }}
+                    >
+                      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
+                        {(item.displayName || item.email || '')
+                          .split(' ')
+                          .map((n: string) => n[0])
+                          .join('')
+                          .toUpperCase()}
+                      </Text>
+                    </View>
+                    <Text style={{ flex: 1, fontSize: 16, color: '#333' }}>
+                      {item.displayName || item.email}
+                    </Text>
+                    <TouchableOpacity onPress={() => handleAddFriend(item.uid)} style={{ padding: 8 }}>
+                      <Ionicons name="add-circle" size={24} color="#F59E93" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+            <TouchableOpacity onPress={() => setAddFriendModalVisible(false)} style={{ marginTop: 20 }}>
+              <Text style={{ color: '#F59E93', fontWeight: 'bold', textAlign: 'center' }}>Close</Text>
+            </TouchableOpacity>
+          </RNSafeAreaView>
+        </View>
+      )}
     </View>
   ) : (
     <View style={[styles.container, { paddingTop: androidTopPadding }]}>
@@ -570,7 +660,7 @@ export default function MapScreen() {
             <View style={styles.bottomSheetHandle} />
             <View style={styles.bottomSheetTitleContainer}>
               <Text style={styles.bottomSheetTitle}>Friends</Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={openAddFriendModal}>
                 <Text style={styles.addFriendsButton}>Add friends</Text>
               </TouchableOpacity>
             </View>
@@ -583,6 +673,59 @@ export default function MapScreen() {
           />
         </Animated.View>
       </GestureDetector>
+
+      {addFriendModalVisible && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100, backgroundColor: 'white' }}>
+          <RNSafeAreaView style={{ flex: 1, padding: 24 }}>
+            <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 16 }}>Add a Friend</Text>
+            {loadingUsers ? <ActivityIndicator /> : (
+              <ScrollView>
+                {allUsers.map((item) => (
+                  <View
+                    key={item.uid || item.email}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: 12,
+                      borderBottomWidth: 1,
+                      borderColor: '#eee',
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 20,
+                        backgroundColor: '#F59E93',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: 12,
+                      }}
+                    >
+                      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
+                        {(item.displayName || item.email || '')
+                          .split(' ')
+                          .map((n: string) => n[0])
+                          .join('')
+                          .toUpperCase()}
+                      </Text>
+                    </View>
+                    <Text style={{ flex: 1, fontSize: 16, color: '#333' }}>
+                      {item.displayName || item.email}
+                    </Text>
+                    <TouchableOpacity onPress={() => handleAddFriend(item.uid)} style={{ padding: 8 }}>
+                      <Ionicons name="add-circle" size={24} color="#F59E93" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+            <TouchableOpacity onPress={() => setAddFriendModalVisible(false)} style={{ marginTop: 20 }}>
+              <Text style={{ color: '#F59E93', fontWeight: 'bold', textAlign: 'center' }}>Close</Text>
+            </TouchableOpacity>
+          </RNSafeAreaView>
+        </View>
+      )}
     </View>
   );
 }
