@@ -1,9 +1,9 @@
 import {
-  Montserrat_400Regular,
-  Montserrat_700Bold,
+    Montserrat_400Regular,
+    Montserrat_700Bold,
 } from '@expo-google-fonts/montserrat';
 import {
-  SourceCodePro_500Medium,
+    SourceCodePro_500Medium,
 } from '@expo-google-fonts/source-code-pro';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';

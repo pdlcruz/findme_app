@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { collection, deleteDoc, doc, getDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -12,6 +13,7 @@ export default function FeedScreen() {
   const user = auth.currentUser;
   const [friends, setFriends] = useState<string[]>([]);
   const [friendMap, setFriendMap] = useState<Record<string, string>>({});
+  const router = useRouter();
 
   useEffect(() => {
     const fetchFriends = async () => {
@@ -82,7 +84,12 @@ export default function FeedScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Current Events</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 10 }}>
+        <Text style={styles.title}>Current Events</Text>
+        <TouchableOpacity onPress={() => router.push('../settings')}>
+          <Ionicons name="settings-outline" size={28} color="#F59E93" />
+        </TouchableOpacity>
+      </View>
       {error ? <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text> : null}
       {loading ? <ActivityIndicator style={{ marginTop: 40 }} /> : (
         <FlatList
