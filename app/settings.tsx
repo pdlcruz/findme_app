@@ -1,7 +1,9 @@
 import { Feather, FontAwesome, Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from "react";
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { auth, db } from '../lib/firebaseConfig';
 
 const profilePic = require("@/assets/images/profile-picture.png");
@@ -20,6 +22,7 @@ export default function SettingsScreen() {
   const [eventsAttended, setEventsAttended] = useState(0);
   const [friends, setFriends] = useState(0);
   const user = auth.currentUser;
+  const router = useRouter();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -36,9 +39,14 @@ export default function SettingsScreen() {
   }, [user]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#F59E93" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Settings</Text>
+      </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-        <Text style={styles.header}>Account</Text>
         {/* Profile Card */}
         <View style={styles.profileCard}>
           <Image
@@ -85,11 +93,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: '#fff',
+  },
+  backButton: {
+    marginRight: 16,
+  },
+  headerTitle: {
     fontSize: 28,
     fontWeight: "bold",
-    marginTop: 16,
-    marginLeft: 20,
-    marginBottom: 16,
     color: "#F59E93",
   },
   profileCard: {
@@ -99,6 +115,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 20,
     marginHorizontal: 16,
+    marginTop: 16,
     marginBottom: 28,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },

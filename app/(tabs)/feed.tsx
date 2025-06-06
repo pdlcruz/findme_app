@@ -36,7 +36,6 @@ export default function FeedScreen() {
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    // Listen for events where creatorId is in [user.uid, ...friends]
     const allUids = [user.uid, ...friends];
     if (allUids.length === 0) return;
     const q = query(
@@ -60,32 +59,37 @@ export default function FeedScreen() {
   };
 
   const renderEventItem = ({ item }: { item: any }) => (
-    <View style={styles.hangoutCard}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Text style={styles.hangoutName}>{item.name}</Text>
-        {user && item.creatorId === user.uid && (
-          <TouchableOpacity onPress={() => handleDelete(item.id)}>
-            <Ionicons name="close-circle" size={22} color="#F59E93" />
-          </TouchableOpacity>
+    <TouchableOpacity onPress={() => router.push({
+      pathname: "/chat",
+      params: { eventId: item.id }
+    })}>
+      <View style={styles.hangoutCard}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.hangoutName}>{item.name}</Text>
+          {user && item.creatorId === user.uid && (
+            <TouchableOpacity onPress={() => handleDelete(item.id)}>
+              <Ionicons name="close-circle" size={22} color="#F59E93" />
+            </TouchableOpacity>
+          )}
+        </View>
+        <Text style={styles.location}>{item.locationDescription || item.location}</Text>
+        {item.invitedFriends && (
+          <View style={styles.membersContainer}>
+            {item.invitedFriends.map((uid: string, index: number) => (
+              <View key={uid} style={styles.memberTag}>
+                <Text style={styles.memberName}>{friendMap[uid] || uid}</Text>
+              </View>
+            ))}
+          </View>
         )}
       </View>
-      <Text style={styles.location}>{item.locationDescription || item.location}</Text>
-      {item.invitedFriends && (
-        <View style={styles.membersContainer}>
-          {item.invitedFriends.map((uid: string, index: number) => (
-            <View key={uid} style={styles.memberTag}>
-              <Text style={styles.memberName}>{friendMap[uid] || uid}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-    </View>
+    </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 10 }}>
-        <Text style={styles.title}>Current Events</Text>
+        <Text style={styles.title}>Feed</Text>
         <TouchableOpacity onPress={() => router.push('../settings')}>
           <Ionicons name="settings-outline" size={28} color="#F59E93" />
         </TouchableOpacity>

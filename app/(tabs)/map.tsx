@@ -544,7 +544,7 @@ export default function MapScreen() {
           <View style={styles.bottomSheetHeader}>
             <View style={styles.bottomSheetHandle} />
             <View style={styles.bottomSheetTitleContainer}>
-              <Text style={styles.bottomSheetTitle}>Friends</Text>
+              <Text style={styles.bottomSheetTitle}>Nearby Friends</Text>
               <TouchableOpacity onPress={openAddFriendModal}>
                 <Text style={styles.addFriendsButton}>Add friends</Text>
               </TouchableOpacity>
@@ -605,7 +605,7 @@ export default function MapScreen() {
                 ))}
               </ScrollView>
             )}
-            <TouchableOpacity onPress={() => setAddFriendModalVisible(false)} style={{ marginTop: 20 }}>
+            <TouchableOpacity onPress={() => setAddFriendModalVisible(false)} style={{ marginTop: 20, paddingBottom: TAB_BAR_HEIGHT }}>
               <Text style={{ color: '#F59E93', fontWeight: 'bold', textAlign: 'center' }}>Close</Text>
             </TouchableOpacity>
           </RNSafeAreaView>
@@ -720,7 +720,7 @@ export default function MapScreen() {
                 ))}
               </ScrollView>
             )}
-            <TouchableOpacity onPress={() => setAddFriendModalVisible(false)} style={{ marginTop: 20 }}>
+            <TouchableOpacity onPress={() => setAddFriendModalVisible(false)} style={{ marginTop: 20, paddingBottom: TAB_BAR_HEIGHT }}>
               <Text style={{ color: '#F59E93', fontWeight: 'bold', textAlign: 'center' }}>Close</Text>
             </TouchableOpacity>
           </RNSafeAreaView>
@@ -804,7 +804,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
-    paddingBottom: 16,
+    paddingBottom: 8,
   },
   bottomSheetHandle: {
     width: 40,
@@ -813,16 +813,16 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     alignSelf: 'center',
     marginTop: 8,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   bottomSheetTitleContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
+    marginBottom: 8,
   },
   bottomSheetTitle: {
-    fontFamily: 'SourceCodePro-Medium',
     fontSize: 24,
     color: '#333',
   },
@@ -832,7 +832,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   friendsList: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   friendItem: {
     flexDirection: 'row',

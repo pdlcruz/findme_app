@@ -1,10 +1,7 @@
 import {
-    Montserrat_400Regular,
-    Montserrat_700Bold,
+  Montserrat_400Regular,
+  Montserrat_700Bold,
 } from '@expo-google-fonts/montserrat';
-import {
-    SourceCodePro_500Medium,
-} from '@expo-google-fonts/source-code-pro';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { SplashScreen, Stack } from 'expo-router';
@@ -23,7 +20,6 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     'Montserrat-Regular': Montserrat_400Regular,
     'Montserrat-Bold': Montserrat_700Bold,
-    'SourceCodePro-Medium': SourceCodePro_500Medium,
   });
 
   if (!loaded) {
@@ -41,6 +37,20 @@ export default function RootLayout() {
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="signin" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen 
+            name="settings" 
+            options={{ 
+              headerShown: false,
+              presentation: 'card',
+            }} 
+          />
+          <Stack.Screen 
+            name="chat" 
+            options={{ 
+              headerShown: false,
+              presentation: 'card',
+            }} 
+          />
           <Stack.Screen name="+not-found" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="auto" />

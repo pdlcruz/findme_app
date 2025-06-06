@@ -1,10 +1,9 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform, View } from 'react-native';
 
 import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
@@ -16,9 +15,9 @@ export default function TabLayout() {
       initialRouteName="map"
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarInactiveTintColor: '#999',
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
         tabBarStyle: Platform.select({
           ios: {
             position: 'absolute',
@@ -27,7 +26,9 @@ export default function TabLayout() {
             right: 0,
             height: 88,
             paddingBottom: 30,
-            backgroundColor: 'transparent',
+            backgroundColor: 'white',
+            borderTopWidth: 1,
+            borderTopColor: '#f0f0f0',
           },
           default: {
             height: 60,
@@ -42,32 +43,25 @@ export default function TabLayout() {
         name="map"
         options={{
           title: 'Map',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="map.fill" color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="map" size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="create"
         options={{
-          title: '',
-          tabBarIcon: ({ color }) => (
+          title: 'Create',
+          tabBarIcon: ({ color, size }) => (
             <View style={{
               backgroundColor: '#F59E93',
-              width: 56,
-              height: 56,
-              borderRadius: 28,
+              width: size,
+              height: size,
+              borderRadius: size / 2,
               justifyContent: 'center',
               alignItems: 'center',
-              marginBottom: 20,
-              shadowColor: '#000',
-              shadowOffset: {
-                width: 0,
-                height: 2,
-              },
-              shadowOpacity: 0.25,
-              shadowRadius: 3.84,
-              elevation: 5,
             }}>
-              <IconSymbol size={32} name="plus" color="#333" />
+              <Ionicons name="add" size={size * 0.6} color="#fff" />
             </View>
           ),
         }}
@@ -76,7 +70,9 @@ export default function TabLayout() {
         name="feed"
         options={{
           title: 'Feed',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.3.fill" color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="fish" size={size} color={color} />
+          ),
         }}
       />
     </Tabs>
