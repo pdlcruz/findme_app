@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { collection, doc, getDoc, getDocs, updateDoc } from 'firebase/firestore';
@@ -533,9 +534,17 @@ export default function MapScreen() {
           style={[styles.broadcastButton, isBroadcasting && styles.broadcastingButton]} 
           onPress={toggleBroadcast}
         >
-          <Text style={[styles.broadcastButtonText, isBroadcasting && styles.broadcastingButtonText]}>
-            {isBroadcasting ? "Stop Sharing" : "Find Me"}
-          </Text>
+          <LinearGradient
+            colors={isBroadcasting ? ['#F5F5F5', '#F5F5F5'] : ['#FFD6D2', '#F59E93', '#E88A80', '#9E93F5']}
+            locations={isBroadcasting ? [0, 1] : [0, 0.33, 0.66, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradientButton}
+          >
+            <Text style={[styles.broadcastButtonText, isBroadcasting && styles.broadcastingButtonText]}>
+              {isBroadcasting ? "Stop Sharing" : "Find Me"}
+            </Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
@@ -648,9 +657,17 @@ export default function MapScreen() {
           style={[styles.broadcastButton, isBroadcasting && styles.broadcastingButton]} 
           onPress={toggleBroadcast}
         >
-          <Text style={[styles.broadcastButtonText, isBroadcasting && styles.broadcastingButtonText]}>
-            {isBroadcasting ? "Stop Sharing" : "Find Me"}
-          </Text>
+          <LinearGradient
+            colors={isBroadcasting ? ['#F5F5F5', '#F5F5F5'] : ['#FFD6D2', '#F59E93', '#E88A80', '#9E93F5']}
+            locations={isBroadcasting ? [0, 1] : [0, 0.33, 0.66, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradientButton}
+          >
+            <Text style={[styles.broadcastButtonText, isBroadcasting && styles.broadcastingButtonText]}>
+              {isBroadcasting ? "Stop Sharing" : "Find Me"}
+            </Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
@@ -756,9 +773,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 20,
     alignSelf: "center",
-    backgroundColor: "#F59E93", // Salmon background for Find Me
-    paddingHorizontal: 24,
-    paddingVertical: 12,
     borderRadius: 25,
     shadowColor: "#000",
     shadowOffset: {
@@ -769,20 +783,25 @@ const styles = StyleSheet.create({
     shadowRadius: 4.65,
     elevation: 8,
     minWidth: 150,
+    overflow: 'hidden',
+  },
+  gradientButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 25,
   },
   broadcastingButton: {
-    backgroundColor: "#F5F5F5", // Grey background for Stop Sharing
     borderWidth: 2,
-    borderColor: "#F59E93", // Salmon border
+    borderColor: "#F59E93",
   },
   broadcastButtonText: {
-    color: "#FFFFFF", // White text for Find Me
+    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
     textAlign: "center",
   },
   broadcastingButtonText: {
-    color: "#F59E93", // Salmon text for Stop Sharing
+    color: "#F59E93",
   },
   bottomSheetContainer: {
     height: BOTTOM_SHEET_HEIGHT,
